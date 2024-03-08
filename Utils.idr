@@ -1,0 +1,45 @@
+module Utils
+
+import Decidable.Equality
+
+namespace Prop
+  export
+  decPair : Dec a -> Dec b -> Dec (a, b)
+  decPair (Yes a) (Yes b) = Yes (a, b)
+  decPair (No contra) _ = No $ \(a, _) => contra a
+  decPair _ (No contra) = No $ \(_, b) => contra b
+
+  export
+  decEither : Dec a -> Dec b -> Dec (Either a b)
+  decEither (Yes a) _ = Yes (Left a)
+  decEither _ (Yes b) = Yes (Right b)
+  decEither (No contra_a) (No contra_b) = No $ \e =>
+    case e of
+      Left a => contra_a a
+      Right b => contra_b b
+
+  export
+  eitherCommut : Either a b -> Either b a
+  eitherCommut (Left a) = Right a
+  eitherCommut (Right b) = Left b 
+
+  export
+  pairCommut : (a, b) -> (b, a)
+  pairCommut (a, b) = (b, a)
+
+  export
+  eitherCommut_roundtrip : (x: Either a b) -> x = eitherCommut (eitherCommut x)
+  eitherCommut_roundtrip (Left x) = Refl
+  eitherCommut_roundtrip (Right x) = Refl
+
+  export
+  pairCommut_roundtrip : (x : (a, b)) -> x = pairCommut (pairCommut x)
+  pairCommut_roundtrip (a, b) = Refl
+
+namespace DecEqList
+  export
+  deleteDec : DecEq a => a -> List a -> List a
+  deleteDec a [] = []
+  deleteDec a (x :: xs) = case decEq a x of
+    Yes _ => deleteDec a xs
+    No _ => a :: deleteDec a xs
