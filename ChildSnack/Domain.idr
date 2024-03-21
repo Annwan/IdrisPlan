@@ -4,6 +4,7 @@ import ChildSnack.Token
 import ChildSnack.Predicate
 import Decidable.Equality
 import Decidable.Decidable
+import Data.List.Elem
 import Petri
 import Utils
 
@@ -64,191 +65,215 @@ DecEq Mark where
                               Yes Refl => Yes Refl
 
 public export
-make_sandwich : Mark -> List Mark
-make_sandwich m = do
-  (aBread, otherBreads) <- select (.at_kitchen_bread m)
-  (aContent, otherContents) <- select (.at_kitchen_content m)
-  (aSandwich, otherSandwiches) <- select (.not_exist_sandwich m)
-  [ ( { at_kitchen_bread := otherBreads
-      , at_kitchen_content := otherContents
-      , not_exist_sandwich := otherSandwiches
-      , at_kitchen_sandwich := aSandwich :: (.at_kitchen_sandwich m)
-      }
-      m
-    )
-  ]
-  
-public export
-make_sandwich' : Mark -> List Mark
-make_sandwich' m =
-  [ { at_kitchen_bread := deleteDec bread m.at_kitchen_bread
-    , at_kitchen_content := deleteDec content m.at_kitchen_content
-    , not_exist_sandwich := deleteDec sandwich m.not_exist_sandwich
-    , at_kitchen_sandwich := sandwich :: m.at_kitchen_sandwich
-    } m
-  | bread <- m.at_kitchen_bread
-  , content <- m.at_kitchen_content
-  , sandwich <- m.not_exist_sandwich]
-
-
-public export
-t_make_sandwich : Transition Mark
-t_make_sandwich = MkTransition "make_sandwich" make_sandwich'
-
-public export
-make_sandwich_no_gluten : Mark -> List Mark
-make_sandwich_no_gluten m = do
-  (aBread, otherBreads) <- select (.at_kitchen_bread m)
-  (aContent, otherContents) <- select (.at_kitchen_content m)
-  (aSandwich, otherSandwiches) <- select (.not_exist_sandwich m)
-  (aNoGlutenBread, _) <- select (.no_gluten_bread m)
-  (aNoGlutenContent, _) <- select (.no_gluten_content m)
-  case decEq (aBread, aContent) (aNoGlutenBread, aNoGlutenContent) of
-    Yes Refl =>
-      [({ at_kitchen_bread := otherBreads
-        , at_kitchen_content := otherContents
-        , not_exist_sandwich := otherSandwiches
-        -- no_gluten_bread static
-        -- no_gluten_content static
-        , at_kitchen_sandwich := aSandwich :: (at_kitchen_sandwich m)
-        , no_gluten_sandwich := aSandwich :: (no_gluten_sandwich m)
-        } m
-      )]
-    No contra => []
-
-public export
-make_sandwich_no_gluten' : Mark -> List Mark
-make_sandwich_no_gluten' m =
-  [ { at_kitchen_bread := deleteDec bread m.at_kitchen_bread
-    , at_kitchen_content := deleteDec content m.at_kitchen_content
-    , not_exist_sandwich := deleteDec sandwich m.not_exist_sandwich
-    , at_kitchen_sandwich := sandwich :: m.at_kitchen_sandwich
-    , no_gluten_sandwich := sandwich :: m.no_gluten_sandwich
-    } m
-  | bread <- m.at_kitchen_bread
-  , content <- m.at_kitchen_content
-  , sandwich <- m.not_exist_sandwich
-  , ngbread <- m.no_gluten_bread
-  , ngcontent <- m.no_gluten_content
-  , isYes $ decEq bread ngbread
-  , isYes $ decEq content ngcontent
-  ]
-
-{-
-msng'' : Mark -> List Mark
-msng'' m = filterDec (\(b, _, _, nb, _) => decEQ b nb )  [ (bread, content, sandwich, ngbread, ngcontent, { at_kitchen_bread := deleteDec bread m.at_kitchen_bread
-    , at_kitchen_content := deleteDec content m.at_kitchen_content
-    , not_exist_sandwich := deleteDec sandwich m.not_exist_sandwich
-    , at_kitchen_sandwich := sandwich :: m.at_kitchen_sandwich
-    , no_gluten_sandwich := sandwich :: m.no_gluten_sandwich
-    } m)
-  | bread <- m.at_kitchen_bread
-  , content <- m.at_kitchen_content
-  , sandwich <- m.not_exist_sandwich
-  , ngbread <- m.no_gluten_bread
-  , ngcontent <- m.no_gluten_content
-  ]
--}
-public export
-t_make_sandwich_no_gluten : Transition Mark
-t_make_sandwich_no_gluten = MkTransition "make_sandwich_no_gluten" make_sandwich_no_gluten'
-
-public export
-put_on_tray : Mark -> List Mark
-put_on_tray m = do
-  (aSandwich, otherSandwiches) <- select (.at_kitchen_sandwich m)
-  (anAt, _) <- select (.at m)
-  case anAt of
-    (At (aTray, Place "kitchen")) =>
-      [({ at_kitchen_sandwich := otherSandwiches
-        , ontray := (OnTray (aSandwich, aTray)) :: (ontray m)
-        } m
-      )]
-    _ => []
-
-public export
-t_put_on_tray : Transition Mark
-t_put_on_tray = MkTransition "put_on_tray" put_on_tray
-
-public export
-move_tray : Mark -> List Mark
-move_tray m = do
-  (anAt, otherAts) <- select (.at m)
-  (aPlace, _) <- select (places m)
-  case anAt of
-    (At (aTray,p)) => case decEq aPlace p of
-      Yes Refl => []
-      No contra =>
-        [({ at := (At (aTray, aPlace)) :: otherAts } m)]
-    _ => []
-
-public export
-t_move_tray : Transition Mark
-t_move_tray = MkTransition "move_tray" move_tray
-
-public export
-serve_sandwich : Mark -> List Mark
-serve_sandwich m = do
-  (anOnTray, otherOnTrays) <- select (.ontray m)
-  (anAt, _) <- select (.at m)
-  (aWaiting, _) <- select (.waiting m)
-  (aChild, _) <- select (.not_allergic_gluten m)
-  case (guard anOnTray anAt aWaiting aChild) of
-    Just c =>
-      [({ ontray := otherOnTrays
-        , served := c :: (.served m)
-        } m
-      )]
-    Nothing => []
-  where
-    guard : Predicate -> Predicate -> Predicate -> Token -> Maybe Token
-    guard (OnTray (_, t)) (At (t', p)) (Waiting (c, p')) c' =
-      case decEq (t, p, c) (t', p', c') of
-        Yes Refl => Just c
-        No contra => Nothing
-    guard _ _ _ _ = Nothing
-
-public export
-t_serve_sandwich : Transition Mark
-t_serve_sandwich = MkTransition "serve_sandwich" serve_sandwich
-
-public export
-serve_sandwich_no_gluten : Mark -> List Mark
-serve_sandwich_no_gluten m = do
-  (aNonGlutenSandwich, _) <- select (.no_gluten_sandwich m)
-  (anOnTray, otherOnTrays) <- select (.ontray m)
-  (anAt, _) <- select (.at m)
-  (aWaiting, _) <- select (.waiting m)
-  (aChild, _) <- select (.allergic_gluten m)
-  case (guard anAt aWaiting aChild anOnTray aNonGlutenSandwich) of
-    Just c =>
-      [({ ontray := otherOnTrays
-        , served := c :: (.served m)
-        } m
-      )]
-    Nothing => []
-  where
-    guard : Predicate -> Predicate -> Token -> Predicate -> Token -> Maybe Token
-    guard (At (t', p)) (Waiting (c, p')) c' (OnTray (s, t)) s' =
-      case decEq (t, c, p, s) (t', c', p', s') of
-        Yes Refl => Just c
-        No contra => Nothing
-    guard _ _ _ _ _ = Nothing
-  
-public export
-t_serve_sandwich_no_gluten : Transition Mark
-t_serve_sandwich_no_gluten = MkTransition "serve_sandwich_no_gluten" serve_sandwich_no_gluten
-
-public export
-theNet : Net Mark
-theNet = MkNet [ t_make_sandwich
-               , t_make_sandwich_no_gluten
-               , t_put_on_tray
-               , t_move_tray
-               , t_serve_sandwich
-               , t_serve_sandwich_no_gluten
-               ]
-
-public export
 emptyMarking : Mark
 emptyMarking = MkMark Nil Nil Nil Nil Nil Nil Nil Nil Nil Nil Nil Nil Nil Nil
+
+
+namespace Search
+
+  public export
+  make_sandwich : Mark -> List Mark
+  make_sandwich m = do
+    (aBread, otherBreads) <- select (.at_kitchen_bread m)
+    (aContent, otherContents) <- select (.at_kitchen_content m)
+    (aSandwich, otherSandwiches) <- select (.not_exist_sandwich m)
+    [ ( { at_kitchen_bread := otherBreads
+        , at_kitchen_content := otherContents
+        , not_exist_sandwich := otherSandwiches
+        , at_kitchen_sandwich := aSandwich :: (.at_kitchen_sandwich m)
+        }
+        m
+      )
+    ]
+
+  public export
+  make_sandwich' : Mark -> List Mark
+  make_sandwich' m =
+    [ { at_kitchen_bread := deleteDec bread m.at_kitchen_bread
+      , at_kitchen_content := deleteDec content m.at_kitchen_content
+      , not_exist_sandwich := deleteDec sandwich m.not_exist_sandwich
+      , at_kitchen_sandwich := sandwich :: m.at_kitchen_sandwich
+      } m
+    | bread <- m.at_kitchen_bread
+    , content <- m.at_kitchen_content
+    , sandwich <- m.not_exist_sandwich]
+
+
+  public export
+  t_make_sandwich : Transition Mark
+  t_make_sandwich = MkTransition "make_sandwich" make_sandwich'
+
+  public export
+  make_sandwich_no_gluten : Mark -> List Mark
+  make_sandwich_no_gluten m = do
+    (aBread, otherBreads) <- select (.at_kitchen_bread m)
+    (aContent, otherContents) <- select (.at_kitchen_content m)
+    (aSandwich, otherSandwiches) <- select (.not_exist_sandwich m)
+    (aNoGlutenBread, _) <- select (.no_gluten_bread m)
+    (aNoGlutenContent, _) <- select (.no_gluten_content m)
+    case decEq (aBread, aContent) (aNoGlutenBread, aNoGlutenContent) of
+      Yes Refl =>
+        [({ at_kitchen_bread := otherBreads
+          , at_kitchen_content := otherContents
+          , not_exist_sandwich := otherSandwiches
+          -- no_gluten_bread static
+          -- no_gluten_content static
+          , at_kitchen_sandwich := aSandwich :: (at_kitchen_sandwich m)
+          , no_gluten_sandwich := aSandwich :: (no_gluten_sandwich m)
+          } m
+        )]
+      No contra => []
+
+  public export
+  make_sandwich_no_gluten' : Mark -> List Mark
+  make_sandwich_no_gluten' m =
+    [ { at_kitchen_bread := deleteDec bread m.at_kitchen_bread
+      , at_kitchen_content := deleteDec content m.at_kitchen_content
+      , not_exist_sandwich := deleteDec sandwich m.not_exist_sandwich
+      , at_kitchen_sandwich := sandwich :: m.at_kitchen_sandwich
+      , no_gluten_sandwich := sandwich :: m.no_gluten_sandwich
+      } m
+    | bread <- m.at_kitchen_bread
+    , content <- m.at_kitchen_content
+    , sandwich <- m.not_exist_sandwich
+    , ngbread <- m.no_gluten_bread
+    , ngcontent <- m.no_gluten_content
+    , isYes $ decEq bread ngbread
+    , isYes $ decEq content ngcontent
+    ]
+
+  public export
+  t_make_sandwich_no_gluten : Transition Mark
+  t_make_sandwich_no_gluten = MkTransition "make_sandwich_no_gluten" make_sandwich_no_gluten'
+
+  public export
+  put_on_tray : Mark -> List Mark
+  put_on_tray m = do
+    (aSandwich, otherSandwiches) <- select (.at_kitchen_sandwich m)
+    (anAt, _) <- select (.at m)
+    case anAt of
+      (At (aTray, Place "kitchen")) =>
+        [({ at_kitchen_sandwich := otherSandwiches
+          , ontray := (OnTray (aSandwich, aTray)) :: (ontray m)
+          } m
+        )]
+      _ => []
+
+  public export
+  t_put_on_tray : Transition Mark
+  t_put_on_tray = MkTransition "put_on_tray" put_on_tray
+
+  public export
+  move_tray : Mark -> List Mark
+  move_tray m = do
+    (anAt, otherAts) <- select (.at m)
+    (aPlace, _) <- select (places m)
+    case anAt of
+      (At (aTray,p)) => case decEq aPlace p of
+        Yes Refl => []
+        No contra =>
+          [({ at := (At (aTray, aPlace)) :: otherAts } m)]
+      _ => []
+
+  public export
+  t_move_tray : Transition Mark
+  t_move_tray = MkTransition "move_tray" move_tray
+
+  public export
+  serve_sandwich : Mark -> List Mark
+  serve_sandwich m = do
+    (anOnTray, otherOnTrays) <- select (.ontray m)
+    (anAt, _) <- select (.at m)
+    (aWaiting, _) <- select (.waiting m)
+    (aChild, _) <- select (.not_allergic_gluten m)
+    case (guard anOnTray anAt aWaiting aChild) of
+      Just c =>
+        [({ ontray := otherOnTrays
+          , served := c :: (.served m)
+          } m
+        )]
+      Nothing => []
+    where
+      guard : Predicate -> Predicate -> Predicate -> Token -> Maybe Token
+      guard (OnTray (_, t)) (At (t', p)) (Waiting (c, p')) c' =
+        case decEq (t, p, c) (t', p', c') of
+          Yes Refl => Just c
+          No contra => Nothing
+      guard _ _ _ _ = Nothing
+
+  public export
+  t_serve_sandwich : Transition Mark
+  t_serve_sandwich = MkTransition "serve_sandwich" serve_sandwich
+
+  public export
+  serve_sandwich_no_gluten : Mark -> List Mark
+  serve_sandwich_no_gluten m = do
+    (aNonGlutenSandwich, _) <- select (.no_gluten_sandwich m)
+    (anOnTray, otherOnTrays) <- select (.ontray m)
+    (anAt, _) <- select (.at m)
+    (aWaiting, _) <- select (.waiting m)
+    (aChild, _) <- select (.allergic_gluten m)
+    case (guard anAt aWaiting aChild anOnTray aNonGlutenSandwich) of
+      Just c =>
+        [({ ontray := otherOnTrays
+          , served := c :: (.served m)
+          } m
+        )]
+      Nothing => []
+    where
+      guard : Predicate -> Predicate -> Token -> Predicate -> Token -> Maybe Token
+      guard (At (t', p)) (Waiting (c, p')) c' (OnTray (s, t)) s' =
+        case decEq (t, c, p, s) (t', c', p', s') of
+          Yes Refl => Just c
+          No contra => Nothing
+      guard _ _ _ _ _ = Nothing
+
+  public export
+  t_serve_sandwich_no_gluten : Transition Mark
+  t_serve_sandwich_no_gluten = MkTransition "serve_sandwich_no_gluten" serve_sandwich_no_gluten
+
+  public export
+  theNet : Net Mark
+  theNet = MkNet [ t_make_sandwich
+                 , t_make_sandwich_no_gluten
+                 , t_put_on_tray
+                 , t_move_tray
+                 , t_serve_sandwich
+                 , t_serve_sandwich_no_gluten
+                 ]
+namespace Run
+  
+  public export make_sandwich : Mark -> List Token -> Maybe Mark
+  make_sandwich m [Bread b, Content c, Sandwich s] = case isElem (Bread b) m.at_kitchen_bread of
+    No _ => Nothing
+    Yes _ => case isElem (Content c) m.at_kitchen_content of
+      No _ => Nothing
+      Yes _ => case isElem (Sandwich s) m.not_exist_sandwich of
+        No _ => Nothing
+        Yes _ => Just $ { at_kitchen_bread := deleteDec (Bread b) m.at_kitchen_bread
+                        , at_kitchen_content := deleteDec (Content c) m.at_kitchen_content
+                        , not_exist_sandwich := deleteDec (Sandwich s) m.not_exist_sandwich
+                        , at_kitchen_sandwich := Sandwich s :: m.at_kitchen_sandwich
+                        } m
+  make_sandwich _ _ = Nothing
+  public export t_make_sandwich : Transition Mark Token
+  t_make_sandwich = MkTransition "make_sandwich" make_sandwich
+  
+  public export make_sandwich_no_gluten : Mark -> List Token -> Maybe Mark
+  make_sandwich_no_gluten m [Bread b, Content c, Sandwich s] = case isElem (Bread b) m.at_kitchen_bread of
+    No _ => Nothing 
+    Yes _ => case isElem (Bread b) m.no_gluten_bread of
+      No _ => Nothing
+      Yes _ => case isElem (Content c) m.at_kitchen_content of
+        No _ => Nothing
+        Yes _ => case isElem (Content c) m.no_gluten_content of
+          No _ => Nothing
+          Yes _ => case isElem (Sandwich s) m.not_exist_sandwich of
+            No _ => Nothing
+            Yes _ => ?j
+  make_sandwich_no_gluten _ _ = Nothing
+  
+  public export t_make_sandwich_no_gluten : Transition Mark Token
+  t_make_sandwich_no_gluten = MkTransition "make_sandwich_no_gluten" make_sandwich_no_gluten
+  
+  

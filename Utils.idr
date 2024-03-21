@@ -36,10 +36,16 @@ namespace Prop
   pairCommut_roundtrip : (x : (a, b)) -> x = pairCommut (pairCommut x)
   pairCommut_roundtrip (a, b) = Refl
 
+  export filterDec : (a -> Dec x) -> List a -> List a
+  filterDec _ [] = []
+  filterDec d (x :: xs) = case d x of
+    Yes _ => x :: filterDec d xs
+    No _ => filterDec d xs
+
 namespace DecEqList
   export
   deleteDec : DecEq a => a -> List a -> List a
   deleteDec a [] = []
   deleteDec a (x :: xs) = case decEq a x of
     Yes _ => deleteDec a xs
-    No _ => a :: deleteDec a xs
+    No _ => x :: deleteDec a xs
