@@ -16,7 +16,10 @@ authors = "COMBET Antoine"
 -- depends =
 
 -- modules to install
--- modules =
+modules = Petri
+        , Utils
+        , Logistics.Domain
+        , Logistics.Problems
 
 -- main file (i.e. file to load at REPL)
 -- main =

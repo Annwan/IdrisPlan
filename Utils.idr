@@ -42,7 +42,7 @@ namespace Prop
     Yes _ => x :: filterDec d xs
     No _ => filterDec d xs
 
-namespace DecEqList
+namespace DecEq
   export
   deleteDec : DecEq a => a -> List a -> List a
   deleteDec a [] = []

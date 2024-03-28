@@ -7,27 +7,25 @@ import Data.List.Elem
 import Petri
 import Utils
 
-public export Token : Type
-Token = String
-
 public export
 record Mark where
   constructor MkMark
   -- Types
-  type_city : List Token
-  type_place : List Token
-  type_physobj : List Token
-  type_package : List Token
-  type_vehicle : List Token
-  type_truck : List Token
-  type_plane : List Token
-  type_airport : List Token
-  type_location : List Token
+  type_city : List String
+  type_place : List String
+  type_physobj : List String
+  type_package : List String
+  type_vehicle : List String
+  type_truck : List String
+  type_plane : List String
+  type_airport : List String
+  type_location : List String
   -- Other predicates
-  pred_in_city : List (Token, Token)
-  pred_at : List (Token, Token)
-  pred_in : List (Token, Token)
-
+  pred_in_city : List (String, String)
+  pred_at : List (String, String)
+  pred_in : List (String, String)
+  
+public export
 DecEq Mark where
   decEq (MkMark tcity tplace tphysobj tpackage tvehicle ttruck tplane tairport tlocation pin_city pat pin)
         (MkMark tcity' tplace' tphysobj' tpackage' tvehicle' ttruck' tplane' tairport' tlocation' pin_city' pat' pin') =
@@ -56,6 +54,22 @@ DecEq Mark where
                             Yes Refl => case decEq pin pin' of
                               No c => No $ \p => c (cong pred_in p)
                               Yes Refl => Yes $ Refl
+public export
+Show Mark where
+  show m = "Mark {"
+         ++ "    type_city: " ++ show m.type_city ++ ",\n"
+         ++ "    type_place: " ++ show m.type_city ++ ",\n"
+         ++ "    type_physobj: " ++ show m.type_physobj ++ ",\n"
+         ++ "    type_package: " ++ show m.type_package ++ ",\n"
+         ++ "    type_vehicle: " ++ show m.type_vehicle ++ ",\n"
+         ++ "    type_truck: " ++ show m.type_truck ++ ",\n"
+         ++ "    type_plane: " ++ show m.type_plane ++ ",\n"
+         ++ "    type_airport: " ++ show m.type_airport ++ ",\n"
+         ++ "    type_location: " ++ show m.type_location ++ ",\n"
+         ++ "    pred_in_city: " ++ show m.pred_in_city ++ ",\n"
+         ++ "    pred_at: " ++ show m.pred_at ++ ",\n"
+         ++ "    pred_in: " ++ show m.pred_in ++ ",\n"
+         ++ "}"
 
 
 public export emptyMark : Mark
@@ -138,7 +152,7 @@ namespace Search
                  , MkTransition "drive_truck" action_drive_truck
                  ]
 namespace Run
-  public export action_load_truck : Mark -> List Token -> Maybe Mark
+  public export action_load_truck : Mark -> List String -> Maybe Mark
   action_load_truck m [var_pkg, var_truck, var_loc] =
     case isElem var_pkg m.type_package of
       No _ => Nothing
@@ -155,7 +169,7 @@ namespace Run
                               } m
   action_load_truck _ _ = Nothing
   
-  public export action_load_plane : Mark -> List Token -> Maybe Mark
+  public export action_load_plane : Mark -> List String -> Maybe Mark
   action_load_plane m [var_pkg, var_plane, var_loc] =
     case isElem var_pkg m.type_package of
       No _ => Nothing
@@ -172,7 +186,7 @@ namespace Run
                               } m
   action_load_plane _ _ = Nothing
   
-  public export action_unload_truck : Mark -> List Token -> Maybe Mark
+  public export action_unload_truck : Mark -> List String -> Maybe Mark
   action_unload_truck m [var_pkg, var_truck, var_loc] =
     case isElem var_pkg m.type_package of
       No _ => Nothing
@@ -188,7 +202,7 @@ namespace Run
                               , pred_at := (var_pkg, var_loc) :: m.pred_at
                               } m
   action_unload_truck _ _ = Nothing
-  public export action_unload_plane : Mark -> List Token -> Maybe Mark
+  public export action_unload_plane : Mark -> List String -> Maybe Mark
   action_unload_plane m [var_pkg, var_plane, var_loc] =
     case isElem var_pkg m.type_package of
       No _ => Nothing
@@ -205,7 +219,7 @@ namespace Run
                               } m
   action_unload_plane _ _ = Nothing
   
-  public export action_fly_plane : Mark -> List Token -> Maybe Mark
+  public export action_fly_plane : Mark -> List String -> Maybe Mark
   action_fly_plane m [var_plane, var_from, var_to] =
     case isElem var_plane m.type_plane of
       No _ => Nothing
@@ -219,7 +233,7 @@ namespace Run
                             } m
   action_fly_plane _ _ = Nothing
   
-  public export action_drive_truck : Mark -> List Token -> Maybe Mark
+  public export action_drive_truck : Mark -> List String -> Maybe Mark
   action_drive_truck m [var_truck, var_from, var_to, var_city] =
     case isElem var_truck m.type_truck of
       No _ => Nothing
@@ -240,21 +254,21 @@ namespace Run
   action_drive_truck _ _ = Nothing
   
   
-  public export t_load_truck : Transition Mark Token
+  public export t_load_truck : Transition Mark String
   t_load_truck = MkTransition "load_truck" action_load_truck
   
-  public export t_load_plane : Transition Mark Token
+  public export t_load_plane : Transition Mark String
   t_load_plane = MkTransition "load_plane" action_load_plane
   
-  public export t_unload_truck : Transition Mark Token
+  public export t_unload_truck : Transition Mark String
   t_unload_truck = MkTransition "unload_truck" action_unload_truck
   
-  public export t_unload_plane : Transition Mark Token
+  public export t_unload_plane : Transition Mark String
   t_unload_plane = MkTransition "unload_plane" action_unload_plane
   
-  public export t_fly_plane : Transition Mark Token
+  public export t_fly_plane : Transition Mark String
   t_fly_plane = MkTransition "fly_plane" action_fly_plane
   
-  public export t_drive_truck : Transition Mark Token
+  public export t_drive_truck : Transition Mark String
   t_drive_truck = MkTransition "drive_truck" action_drive_truck
 
