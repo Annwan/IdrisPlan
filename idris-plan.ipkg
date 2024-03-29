@@ -20,6 +20,7 @@ modules = Petri
         , Utils
         , Logistics.Domain
         , Logistics.Problems
+        , Main
 
 -- main file (i.e. file to load at REPL)
 -- main =

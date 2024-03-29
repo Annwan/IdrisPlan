@@ -6,6 +6,7 @@ import Petri
 
 import Decidable.Equality
 import Data.List.Elem
+import Data.Maybe
 
 namespace P1
   
@@ -75,3 +76,52 @@ namespace P1
     , (t_unload_truck, ["obj23", "tru1", "pos1"])
     , (t_unload_truck, ["obj21", "tru1", "pos1"])
     ]
+
+  public export failing_plan : List (Transition Mark String, List String)
+  failing_plan =
+    [ (t_load_truck, ["obj23", "tru2", "pos2"])
+    , (t_load_truck, ["obj21", "tru2", "pos2"])
+    , (t_load_truck, ["obj13", "tru1", "pos1"])
+    , (t_load_truck, ["obj11", "tru1", "pos1"])
+    , (t_drive_truck, ["tru2", "pos2", "apt2", "cit2"])
+    , (t_unload_truck, ["obj23", "tru2", "apt2"])
+    , (t_load_plane, ["obj23", "apn1", "apt2"])
+    , (t_unload_truck, ["obj21", "tru2", "apt2"])
+    , (t_load_plane, ["obj21", "apn1", "apt2"])
+    , (t_fly_plane,  ["apn1", "apt2", "apt1"])
+    , (t_unload_plane, ["obj23", "apn1", "apt1"])
+    , (t_unload_plane, ["obj21", "apn1", "apt1"])
+    , (t_drive_truck, ["tru1", "pos1", "apt1", "cit1"])
+    , (t_load_truck, ["obj23", "tru1", "apt1"])
+    , (t_load_truck, ["obj21", "tru1", "apt1"])
+    , (t_unload_truck, ["obj13", "tru1", "apt1"])
+    , (t_unload_truck, ["obj11", "tru1", "apt1"])
+    , (t_drive_truck, ["tru1", "apt1", "pos1", "cit1"])
+    , (t_unload_truck, ["obj23", "tru1", "pos1"])
+    , (t_load_truck, ["obj23", "tru1", "pos1"])
+    ]
+    
+  public export invalid_plan : List (Transition Mark String, List String)
+  invalid_plan =
+    [ (t_load_truck, ["obj23", "tru2", "pos2"])
+    , (t_load_truck, ["obj21", "tru2", "pos2"])
+    , (t_load_truck, ["obj13", "tru1", "pos1"])
+    , (t_load_truck, ["obj21", "tru1", "pos1"])
+    , (t_drive_truck, ["tru2", "pos2", "apt2", "cit2"])
+    , (t_unload_truck, ["obj23", "tru2", "apt2"])
+    , (t_load_plane, ["obj23", "apn1", "apt2"])
+    , (t_unload_truck, ["obj21", "tru2", "apt2"])
+    , (t_load_plane, ["obj21", "apn1", "apt2"])
+    , (t_fly_plane,  ["apn1", "apt2", "apt1"])
+    , (t_unload_plane, ["obj23", "apn1", "apt1"])
+    , (t_unload_plane, ["obj21", "apn1", "apt1"])
+    , (t_drive_truck, ["tru1", "pos1", "apt1", "cit1"])
+    , (t_load_truck, ["obj23", "tru1", "apt1"])
+    , (t_load_truck, ["obj21", "tru1", "apt1"])
+    , (t_unload_truck, ["obj13", "tru1", "apt1"])
+    , (t_unload_truck, ["obj11", "tru1", "apt1"])
+    , (t_drive_truck, ["tru1", "apt1", "pos1", "cit1"])
+    , (t_unload_truck, ["obj23", "tru1", "pos1"])
+    , (t_load_truck, ["obj23", "tru1", "pos1"])
+    ]
+
