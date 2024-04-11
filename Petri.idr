@@ -2,21 +2,23 @@ module Petri
 
 import Decidable.Decidable
 import Data.Maybe
+import Data.List
+import Debug.Trace
 
 import Utils
 
 namespace Search
 
   public export
-  record Transition mark where
+  record Transition mark token where
     constructor MkTransition
     name : String
-    action : mark -> List mark
+    action : mark -> List (List token, mark)
   
   public export
-  record Net mark where
+  record Net mark token where
     constructor MkNet
-    trans : List (Transition mark)
+    trans : List (Transition mark token)
 
   export
   select : List a -> List (a, List a)
@@ -24,15 +26,45 @@ namespace Search
   select (x :: xs) = (x, xs) :: [(y, (x :: ys)) | (y, ys) <- select xs]
 
   export
-  enabled : Net m -> m -> List (String, m)
+  enabled : Net m t -> m -> List ((String, List t), m)
   enabled net marking =
-    [ (transName, nextMarking)
+    [ ((transName, args), nextMarking)
     | (transName, ms) <- [ (name t, action t marking) 
                          | t <- trans net
                          ]
-    , nextMarking <- ms
+    , (args, nextMarking) <- ms
     ]
 
+ 
+  search_rec : {token: Type} -> Net mark token
+             -> {goal : mark -> Type} -> ((x: mark) -> Dec (goal x))
+             -> (List (List (String, List token), mark)
+                 -> List (List (String, List token), mark))
+             -> List (List (String, List token), mark)
+             -> Maybe $ List (String, List token)
+  search_rec _ _ _ [] = Nothing
+  search_rec n ig h ((p, m) :: xs) = case ig m of
+    Yes _ => Just p
+    No _ => search_rec n ig h $ h $ xs ++ (reformat (p) (enabled n m))
+      where
+        Args : Type
+        Args = List token
+        reformat : List (String, Args)
+                 -> List ((String, Args), mark)
+                 -> List (List (String, Args), mark)
+        reformat plan [] = []
+        reformat plan ((p, m) :: xs) = ((p :: plan), m) :: reformat plan xs 
+    
+  export
+  search : {token : Type} -> Net mark token
+         -> mark -> {goal: mark -> Type} -> ((x: mark) -> Dec (goal x))
+         -> (List (List (String, List token), mark)
+            -> List (List (String, List token), mark))
+         ->  Maybe $ List (String, List token)
+  search n i ig h = search_rec n ig h [([], i)]
+  
+  
+  
 namespace Run
 
   public export
@@ -42,7 +74,7 @@ namespace Run
     action : mark -> List token -> Maybe mark
 
   public export Plan: (mark: Type) -> (token: Type) -> Type
-  Plan mk t = List (Transition mk t, List t)
+  Plan mk t = List (Run.Transition mk t, List t)
 
   public export
   run : Plan mark token -> mark -> Maybe mark

@@ -6,10 +6,8 @@ import Logistics.Problems
 import Data.Maybe
 
 export main : IO ()
-main = do
-  case decIsPlanValid invalid_plan init of
-    Yes valid => case decIsPlanCorrect invalid_plan init decGoal of
-      Yes correct => putStrLn "plan correct"
-      No incorrect => putStrLn "plan incorrect"
-    No invalid => putStrLn "plan invalid"
-
+main =
+  let plan = search theNet Ptest2.init Ptest2.decGoal id
+  in case plan of
+    Nothing => putStrLn "No plan"
+    Just p => putStrLn $ concatMap (\x => show x ++ "\n") $ reverse p

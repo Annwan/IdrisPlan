@@ -24,7 +24,7 @@ record Mark where
   pred_in_city : List (String, String)
   pred_at : List (String, String)
   pred_in : List (String, String)
-  
+
 public export
 DecEq Mark where
   decEq (MkMark tcity tplace tphysobj tpackage tvehicle ttruck tplane tairport tlocation pin_city pat pin)
@@ -54,6 +54,7 @@ DecEq Mark where
                             Yes Refl => case decEq pin pin' of
                               No c => No $ \p => c (cong pred_in p)
                               Yes Refl => Yes $ Refl
+
 public export
 Show Mark where
   show m = "Mark {"
@@ -71,69 +72,80 @@ Show Mark where
          ++ "    pred_in: " ++ show m.pred_in ++ ",\n"
          ++ "}"
 
-
 public export emptyMark : Mark
 emptyMark = MkMark [] [] [] [] [] [] [] [] [] [] [] []
 
 namespace Search
   public export
-  action_load_truck : Mark -> List Mark
+  action_load_truck : Mark -> List (List String, Mark)
   action_load_truck m =
-    [ { pred_at := deleteDec (var_pkg, var_loc) m.pred_at
-      , pred_in := (var_pkg, var_truck) :: m.pred_in
-      } m
+    [ ( [var_pkg, var_truck, var_loc]
+      , { pred_at := deleteDec (var_pkg, var_loc) m.pred_at
+        , pred_in := (var_pkg, var_truck) :: m.pred_in
+          } m
+      )
     | var_pkg <- m.type_package
     , var_truck <- m.type_truck
     , var_loc <- m.type_place
     , isYes $ isElem (var_truck, var_loc) m.pred_at
     , isYes $ isElem (var_pkg, var_loc) m.pred_at
     ]
-  public export action_load_plane : Mark -> List Mark
+  public export action_load_plane : Mark -> List (List String, Mark)
   action_load_plane m =
-    [ { pred_at := deleteDec (var_pkg, var_loc) m.pred_at
-      , pred_in := (var_pkg, var_plane) :: m.pred_in
-      } m
+    [ ( [var_pkg, var_plane, var_loc] 
+      , { pred_at := deleteDec (var_pkg, var_loc) m.pred_at
+        , pred_in := (var_pkg, var_plane) :: m.pred_in
+        } m
+      )
     | var_pkg <- m.type_package
     , var_plane <- m.type_plane
     , var_loc <- m.type_place
     , isYes $ isElem (var_plane, var_loc) m.pred_at
     , isYes $ isElem (var_pkg, var_loc) m.pred_at
     ]
-  public export action_unload_truck : Mark -> List Mark
+  public export action_unload_truck : Mark -> List (List String, Mark)
   action_unload_truck m =
-    [ { pred_at := (var_pkg, var_loc) :: m.pred_at
-      , pred_in := deleteDec (var_pkg, var_truck) m.pred_in
-      } m
+    [ ( [var_pkg, var_truck, var_loc]
+      , { pred_at := (var_pkg, var_loc) :: m.pred_at
+        , pred_in := deleteDec (var_pkg, var_truck) m.pred_in
+        } m
+      )
     | var_pkg <- m.type_package
     , var_truck <- m.type_truck
     , var_loc <- m.type_place
     , isYes $ isElem (var_truck, var_loc) m.pred_at
     , isYes $ isElem (var_pkg, var_truck) m.pred_in
     ]
-  public export action_unload_plane : Mark -> List Mark
+  public export action_unload_plane : Mark -> List (List String, Mark)
   action_unload_plane m =
-    [ { pred_at := (var_pkg, var_loc) :: m.pred_at
-      , pred_in := deleteDec (var_pkg, var_plane) m.pred_in
-      } m
+    [ ( [var_pkg, var_plane, var_loc]
+      , { pred_at := (var_pkg, var_loc) :: m.pred_at
+        , pred_in := deleteDec (var_pkg, var_plane) m.pred_in
+        } m
+      )
     | var_pkg <- m.type_package
     , var_plane <- m.type_plane
     , var_loc <- m.type_place
     , isYes $ isElem (var_plane, var_loc) m.pred_at
     , isYes $ isElem (var_pkg, var_plane) m.pred_in
     ]
-  public export action_fly_plane : Mark -> List Mark
+  public export action_fly_plane : Mark -> List (List String, Mark)
   action_fly_plane m =
-    [ { pred_at := (var_plane, var_to) :: deleteDec (var_plane, var_from) m.pred_at
-      } m
+    [ ( [var_plane, var_from, var_to]
+      , { pred_at := (var_plane, var_to) :: deleteDec (var_plane, var_from) m.pred_at
+        } m
+      )
     | var_plane <- m.type_plane
     , var_from <- m.type_airport
     , var_to <- m.type_airport
     , isYes $ isElem (var_plane, var_from) m.pred_at
     ]
-  public export action_drive_truck : Mark -> List Mark
+  public export action_drive_truck : Mark -> List (List String, Mark)
   action_drive_truck m =
-    [ { pred_at := (var_truck, var_to) :: deleteDec (var_truck, var_from) m.pred_at
-      } m
+    [ ( [var_truck, var_from, var_to, var_city]
+      , { pred_at := (var_truck, var_to) :: deleteDec (var_truck, var_from) m.pred_at
+        } m
+      )
     | var_truck <- m.type_truck
     , var_from <- m.type_place
     , var_to <- m.type_place
@@ -143,7 +155,7 @@ namespace Search
     , isYes $ isElem (var_to, var_city) m.pred_in_city
     ]
   
-  public export theNet : Net Mark
+  public export theNet : Net Mark String
   theNet = MkNet [ MkTransition "load_truck" action_load_truck
                  , MkTransition "load_plane" action_load_plane
                  , MkTransition "unload_truck" action_unload_truck
@@ -168,7 +180,7 @@ namespace Run
                               , pred_in := (var_pkg, var_truck) :: m.pred_in
                               } m
   action_load_truck _ _ = Nothing
-  
+
   public export action_load_plane : Mark -> List String -> Maybe Mark
   action_load_plane m [var_pkg, var_plane, var_loc] =
     case isElem var_pkg m.type_package of
@@ -185,7 +197,7 @@ namespace Run
                               , pred_in := (var_pkg, var_plane) :: m.pred_in
                               } m
   action_load_plane _ _ = Nothing
-  
+
   public export action_unload_truck : Mark -> List String -> Maybe Mark
   action_unload_truck m [var_pkg, var_truck, var_loc] =
     case isElem var_pkg m.type_package of
@@ -218,7 +230,7 @@ namespace Run
                               , pred_at := (var_pkg, var_loc) :: m.pred_at
                               } m
   action_unload_plane _ _ = Nothing
-  
+
   public export action_fly_plane : Mark -> List String -> Maybe Mark
   action_fly_plane m [var_plane, var_from, var_to] =
     case isElem var_plane m.type_plane of
@@ -232,7 +244,7 @@ namespace Run
             Yes _ => Just $ { pred_at := (var_plane, var_to) :: deleteDec (var_plane, var_from) m.pred_at
                             } m
   action_fly_plane _ _ = Nothing
-  
+
   public export action_drive_truck : Mark -> List String -> Maybe Mark
   action_drive_truck m [var_truck, var_from, var_to, var_city] =
     case isElem var_truck m.type_truck of
@@ -252,23 +264,21 @@ namespace Run
                   Yes _ => Just $ { pred_at := (var_truck, var_to) :: deleteDec (var_truck, var_from) m.pred_at
                                   } m
   action_drive_truck _ _ = Nothing
-  
-  
-  public export t_load_truck : Transition Mark String
-  t_load_truck = MkTransition "load_truck" action_load_truck
-  
-  public export t_load_plane : Transition Mark String
-  t_load_plane = MkTransition "load_plane" action_load_plane
-  
-  public export t_unload_truck : Transition Mark String
-  t_unload_truck = MkTransition "unload_truck" action_unload_truck
-  
-  public export t_unload_plane : Transition Mark String
-  t_unload_plane = MkTransition "unload_plane" action_unload_plane
-  
-  public export t_fly_plane : Transition Mark String
-  t_fly_plane = MkTransition "fly_plane" action_fly_plane
-  
-  public export t_drive_truck : Transition Mark String
-  t_drive_truck = MkTransition "drive_truck" action_drive_truck
 
+  public export t_load_truck : Run.Transition Mark String
+  t_load_truck = MkTransition "load_truck" action_load_truck
+
+  public export t_load_plane : Run.Transition Mark String
+  t_load_plane = MkTransition "load_plane" action_load_plane
+
+  public export t_unload_truck : Run.Transition Mark String
+  t_unload_truck = MkTransition "unload_truck" action_unload_truck
+
+  public export t_unload_plane : Run.Transition Mark String
+  t_unload_plane = MkTransition "unload_plane" action_unload_plane
+
+  public export t_fly_plane : Run.Transition Mark String
+  t_fly_plane = MkTransition "fly_plane" action_fly_plane
+
+  public export t_drive_truck : Run.Transition Mark String
+  t_drive_truck = MkTransition "drive_truck" action_drive_truck
