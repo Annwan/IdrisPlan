@@ -2,6 +2,7 @@ module Logistics.Domain
 
 import Decidable.Equality
 import Decidable.Decidable
+import Data.List
 import Data.List.Elem
 
 import Petri
@@ -74,6 +75,19 @@ Show Mark where
 
 public export emptyMark : Mark
 emptyMark = MkMark [] [] [] [] [] [] [] [] [] [] [] []
+
+public export
+Semigroup Mark where
+  (MkMark a b c d e f g h i j k l) <+> (MkMark a' b' c' d' e' f' g' h' i' j' k' l') = 
+    MkMark (nub $ a ++ a') (nub $ b ++ b') (nub $ c ++ c') (nub $ d ++ d')
+           (nub $ e ++ e') (nub $ f ++ f') (nub $ g ++ g') (nub $ h ++ h')
+           (nub $ i ++ i') (nub $ j ++ j') (nub $ k ++ k') (nub $ l ++ l')
+
+public export
+Monoid Mark where
+  neutral = emptyMark
+
+export Eq Mark where a == b = isYes $ decEq a b
 
 namespace Search
   public export

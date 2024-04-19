@@ -35,17 +35,38 @@ namespace Search
     , (args, nextMarking) <- ms
     ]
 
- 
+  search_rec : {token : Type} -> {mark : Type}
+             -> Net mark token
+             -> {goal : mark -> Type} -> ((x : mark) -> Dec (goal x))
+             -> (mark -> Nat)
+             -> List (List (String, List token), mark, Nat)
+             -> Maybe (List (String, List token))
+  search_rec net isGoal h [] = Nothing
+  search_rec net isGoal h ((p, m, s) :: rest) = case isGoal m of
+    Yes _ => Just p
+    No _ => let new = map (\v@(np, nm) => (np, nm, length np + h nm))
+                    . map (\(x, nm) => ((x :: p), nm))
+                    $ enabled net m
+                queue = sortBy (\(_, _, v) => \(_, _, v') => compare v v') (rest ++ new)
+            in search_rec net isGoal h queue
+  
+  export search : {token : Type} -> {mark : Type}
+                -> Net mark token
+                -> {goal : mark -> Type} -> ((x : mark) -> Dec (goal x))
+                -> (mark -> Nat)
+                -> mark -> Maybe (List (String, List token))
+  search net isGoal h init = search_rec net isGoal h [([], init, 0)]
+                
+{-  
   search_rec : {token: Type} -> Net mark token
              -> {goal : mark -> Type} -> ((x: mark) -> Dec (goal x))
-             -> (List (List (String, List token), mark)
-                 -> List (List (String, List token), mark))
+             -> ((List (String, List token), mark) -> Int) 
              -> List (List (String, List token), mark)
              -> Maybe $ List (String, List token)
   search_rec _ _ _ [] = Nothing
   search_rec n ig h ((p, m) :: xs) = case ig m of
     Yes _ => Just p
-    No _ => search_rec n ig h $ h $ xs ++ (reformat (p) (enabled n m))
+    No _ => search_rec n ig h $ ?sort $ xs ++ (reformat (p) (enabled n m))
       where
         Args : Type
         Args = List token
@@ -58,12 +79,12 @@ namespace Search
   export
   search : {token : Type} -> Net mark token
          -> mark -> {goal: mark -> Type} -> ((x: mark) -> Dec (goal x))
-         -> (List (List (String, List token), mark)
-            -> List (List (String, List token), mark))
+         -> ((List (String, List token), mark) -> String) 
+            -> List (List (String, List token), mark)
          ->  Maybe $ List (String, List token)
   search n i ig h = search_rec n ig h [([], i)]
   
-  
+-}
   
 namespace Run
 

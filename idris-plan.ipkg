@@ -18,6 +18,7 @@ authors = "COMBET Antoine"
 -- modules to install
 modules = Petri
         , Utils
+        , Heuristics
         , Logistics.Domain
         , Logistics.Problems
         , Main
