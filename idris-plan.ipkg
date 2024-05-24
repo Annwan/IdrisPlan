@@ -13,7 +13,7 @@ authors = "COMBET Antoine"
 -- langversion
 
 -- packages to add to search path
--- depends =
+depends = contrib
 
 -- modules to install
 modules = Petri
@@ -25,7 +25,7 @@ modules = Petri
         , Main
 
 -- main file (i.e. file to load at REPL)
--- main =
+main = Main
 
 -- name of executable
 -- executable =

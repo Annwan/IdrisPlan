@@ -43,4 +43,13 @@ deleteDec a (x :: xs) = case decEq a x of
     Yes _ => deleteDec a xs
     No _ => x :: deleteDec a xs
 
+||| Handwave a reason for impossibilty, if it turns out to somehow happen crash
+||| the program
+export
+handwave_impossibility : (reason : String) -> a
+handwave_impossibility r = assert_total $ idris_crash r
 
+export
+||| Abort the program due to malformed or nonsensical input to a function
+abort : (reason : String) -> a
+abort r = assert_total $ idris_crash r

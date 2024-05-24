@@ -5,15 +5,9 @@ import Logistics.Domain
 import Logistics.Problems
 import Data.Maybe
 import Heuristics
-import Transl.SExp
 
 export main : IO ()
-main = do
-  print (SExpList [])
-  print (SExpList [SExpId $ MkId "domain", SExpId $ MkId "logistics"])
-
-export main' : IO ()
-main' =
+main =
   let
     plan = search theNet Ptest.decGoal (not_ff theNet Ptest.decGoal) Ptest.init
   in case plan of
